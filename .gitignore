@@ -1,0 +1,27 @@
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+.clang_complete
+.gcc-flags.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Secrets
+.env
+*.pem
+*.key
+secrets.h
+include/secrets.h
+
+# Cloned character voice files — never committed, see CLAUDE.md §11
+voice/
+*.onnx
+*.wav.secret
