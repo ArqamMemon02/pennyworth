@@ -4,15 +4,14 @@
 #include <cstdlib>
 
 #include "moon_phase.h"
+#include "pennyworth_world_assets.h"
 
 #define WORLD_DIAMETER 240
 #define WORLD_CENTER (WORLD_DIAMETER / 2)
 
 #define STAR_COUNT 14
-#define SUN_DIAMETER 28
 #define MOON_DIAMETER 46
 #define CLOUD_COUNT 2
-#define CLOUD_PUFFS 3
 
 /* Background tone keyframes across a 24h day. Colors stay mid-saturation
  * (never near-white or near-black) so the white clock text stays legible
@@ -40,28 +39,12 @@ static const tone_keyframe TONE_KEYFRAMES[] = {
 #define DAY_END_HOUR 18.0f
 #define CLOUD_END_HOUR 10.0f /* clouds linger through dawn into mid-morning, then clear */
 
-/* Each cloud is 3 overlapping puffs (left, center-top, right) — the classic
- * flat cloud-icon cluster. Positions/radii keep every puff's edge inside
- * the 120px round boundary, same containment approach as the rest of this
- * file (see DEVLOG re: clip_corner). */
-struct cloud_puff {
-  int16_t dx, dy, r;
-};
-struct cloud_def {
-  int16_t cx, cy;
-  cloud_puff puffs[CLOUD_PUFFS];
-};
-static const cloud_def CLOUD_DEFS[CLOUD_COUNT] = {
-    {78, 92, {{-14, 2, 9}, {0, -4, 13}, {14, 3, 10}}},
-    {168, 98, {{-13, 3, 9}, {1, -3, 12}, {14, 2, 9}}},
-};
-
 static lv_obj_t *s_bg;
 static lv_obj_t *s_sun;
 static lv_obj_t *s_moon_lit;
 static lv_obj_t *s_moon_shadow;
 static lv_obj_t *s_stars[STAR_COUNT];
-static lv_obj_t *s_clouds[CLOUD_COUNT][CLOUD_PUFFS];
+static lv_obj_t *s_clouds[CLOUD_COUNT];
 static bool s_is_day;
 static bool s_visibility_applied = false; /* forces the first update to set visibility, regardless of what s_is_day happens to default to */
 static bool s_initialized = false;
@@ -136,10 +119,12 @@ void pennyworth_world_init(lv_obj_t *parent) {
     twinkle(star);
   }
 
-  /* Sun: fixed decorative corner position (not a real sun position), placed
-   * at radius 90 from center so its full 28px disc clears the 120px edge. */
-  s_sun = make_dot(parent, SUN_DIAMETER, lv_color_make(0xff, 0xd3, 0x66));
-  lv_obj_set_pos(s_sun, 42, 42);
+  /* Sun: fixed decorative corner position (not a real sun position). Source
+   * art is a 186x182 pixel-art icon; scaled to ~34px on screen. */
+  s_sun = lv_image_create(parent);
+  lv_image_set_src(s_sun, &pennyworth_sun);
+  lv_image_set_scale(s_sun, 47); /* 256 == 100% */
+  lv_obj_align(s_sun, LV_ALIGN_CENTER, -58, -58);
 
   /* Moon: two overlapping discs. The shadow disc slides across the lit disc
    * by up to half a diameter; where they overlap reads as the dark side,
@@ -155,19 +140,18 @@ void pennyworth_world_init(lv_obj_t *parent) {
    * until the first update() call overwrites it. */
   s_moon_shadow = make_dot(parent, MOON_DIAMETER, lv_color_white());
 
-  /* Clouds: dawn/morning only (see CLOUD_END_HOUR). Soft warm-white, not
-   * fully opaque, so the amber dawn tone shows through. */
-  for (int c = 0; c < CLOUD_COUNT; c++) {
-    const cloud_def &def = CLOUD_DEFS[c];
-    for (int p = 0; p < CLOUD_PUFFS; p++) {
-      const cloud_puff &puff = def.puffs[p];
-      lv_obj_t *dot =
-          make_dot(parent, puff.r * 2, lv_color_make(0xff, 0xf6, 0xe6));
-      lv_obj_set_style_bg_opa(dot, 210, 0);
-      lv_obj_set_pos(dot, def.cx + puff.dx - puff.r, def.cy + puff.dy - puff.r);
-      s_clouds[c][p] = dot;
-    }
-  }
+  /* Clouds: dawn/morning only (see CLOUD_END_HOUR). Two different source
+   * illustrations for a little variety, scaled down and kept clear of the
+   * clock and the sprite. */
+  s_clouds[0] = lv_image_create(parent);
+  lv_image_set_src(s_clouds[0], &pennyworth_cloud_a);
+  lv_image_set_scale(s_clouds[0], 107);
+  lv_obj_align(s_clouds[0], LV_ALIGN_CENTER, -25, -20);
+
+  s_clouds[1] = lv_image_create(parent);
+  lv_image_set_src(s_clouds[1], &pennyworth_cloud_b);
+  lv_image_set_scale(s_clouds[1], 89);
+  lv_obj_align(s_clouds[1], LV_ALIGN_CENTER, 45, -28);
 
   s_initialized = true;
 }
@@ -195,9 +179,7 @@ void pennyworth_world_update(const struct tm *now) {
   }
 
   bool is_cloudy = is_day && hour < CLOUD_END_HOUR;
-  for (int c = 0; c < CLOUD_COUNT; c++)
-    for (int p = 0; p < CLOUD_PUFFS; p++)
-      lv_obj_set_hidden(s_clouds[c][p], !is_cloudy);
+  for (int c = 0; c < CLOUD_COUNT; c++) lv_obj_set_hidden(s_clouds[c], !is_cloudy);
 
   double phase = moon_phase_fraction(now->tm_year + 1900, now->tm_mon + 1,
                                       now->tm_mday);
