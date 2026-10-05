@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include "pennyworth_input.h"
+#include "pennyworth_launcher.h"
 #include "pennyworth_state.h"
 #include "pennyworth_world.h"
 
@@ -30,6 +31,7 @@ static void clock_timer_cb(lv_timer_t *timer) {
 static void state_tick_timer_cb(lv_timer_t *timer) {
   (void)timer;
   pennyworth_state_tick();
+  pennyworth_launcher_tick();
 }
 
 static void wake_on_tap_cb(lv_event_t *e) {
@@ -73,6 +75,10 @@ void pennyworth_ui_init(void) {
   lv_obj_set_style_text_font(s_clock_label, &lv_font_montserrat_28, 0);
   lv_obj_align(s_clock_label, LV_ALIGN_CENTER, 0, -48);
   lv_label_set_text(s_clock_label, "00:00:00");
+
+  /* Created last so its dimming overlay/icon/panel sit on top of the world,
+   * sprite, and clock all at once. */
+  pennyworth_launcher_init(round_mask);
 
   lv_timer_create(clock_timer_cb, 1000, NULL);
   clock_timer_cb(NULL);

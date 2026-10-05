@@ -20,3 +20,9 @@ void pennyworth_state_wake_event(void);
 /* Drives transition timers and the idle blink. Call frequently (tens of
  * ms) for smooth transitions — the 1s clock tick is too coarse. */
 void pennyworth_state_tick(void);
+
+pennyworth_state_t pennyworth_state_get(void);
+
+/* Launcher calls this when the sleep-timeout setting changes. Takes effect
+ * immediately, including for the AWAKE period already in progress. */
+void pennyworth_state_set_awake_timeout_ms(uint32_t ms);

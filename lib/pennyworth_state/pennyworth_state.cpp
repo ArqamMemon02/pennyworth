@@ -102,3 +102,9 @@ void pennyworth_state_tick(void) {
       break;
   }
 }
+
+pennyworth_state_t pennyworth_state_get(void) { return s_state; }
+
+void pennyworth_state_set_awake_timeout_ms(uint32_t ms) {
+  s_awake_timeout_ms = ms;
+}
