@@ -4,6 +4,7 @@
 #include <time.h>
 #include <stdio.h>
 
+#include "pennyworth_sprites.h"
 #include "pennyworth_world.h"
 
 #define PENNYWORTH_SCREEN_DIAMETER 240
@@ -41,10 +42,19 @@ void pennyworth_ui_init(void) {
 
   pennyworth_world_init(round_mask);
 
+  /* Placeholder: static sprite, no state machine yet (Milestone 3/4). Scaled
+   * and nudged down so it (and the clock above it) both stay inside the
+   * 120px-radius circle, same geometric-containment approach as the world
+   * layer uses since clip_corner isn't usable here (see DEVLOG). */
+  lv_obj_t *pennyworth = lv_image_create(round_mask);
+  lv_image_set_src(pennyworth, &pennyworth_awake);
+  lv_image_set_scale(pennyworth, 110); /* ~43% of the source's 200x200 */
+  lv_obj_align(pennyworth, LV_ALIGN_CENTER, 0, 38);
+
   s_clock_label = lv_label_create(round_mask);
   lv_obj_set_style_text_color(s_clock_label, lv_color_white(), 0);
   lv_obj_set_style_text_font(s_clock_label, &lv_font_montserrat_28, 0);
-  lv_obj_center(s_clock_label);
+  lv_obj_align(s_clock_label, LV_ALIGN_CENTER, 0, -48);
   lv_label_set_text(s_clock_label, "00:00:00");
 
   lv_timer_create(clock_timer_cb, 1000, NULL);
