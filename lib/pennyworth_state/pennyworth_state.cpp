@@ -2,11 +2,12 @@
 
 #include <cstdlib>
 
+#include "pennyworth_power.h"
 #include "pennyworth_sprites.h"
+#include "pennyworth_storage.h"
 
 #define WAKING_DURATION_MS 700
 #define SLEEPING_DURATION_MS 500
-#define AWAKE_TIMEOUT_MS 8000
 
 #define BLINK_INTERVAL_MIN_MS 2500
 #define BLINK_INTERVAL_MAX_MS 5000
@@ -17,6 +18,7 @@ static pennyworth_state_t s_state;
 static uint32_t s_state_entered_ms;
 static uint32_t s_next_blink_ms;
 static bool s_blinking;
+static uint32_t s_awake_timeout_ms;
 
 static uint32_t random_blink_delay(void) {
   return BLINK_INTERVAL_MIN_MS +
@@ -30,9 +32,11 @@ static void enter_state(pennyworth_state_t state) {
   switch (state) {
     case PENNYWORTH_ASLEEP:
       lv_image_set_src(s_sprite, &pennyworth_asleep);
+      pennyworth_power_enter_sleep();
       break;
     case PENNYWORTH_WAKING:
       lv_image_set_src(s_sprite, &pennyworth_waking);
+      pennyworth_power_enter_wake();
       break;
     case PENNYWORTH_AWAKE:
       lv_image_set_src(s_sprite, &pennyworth_awake);
@@ -49,6 +53,11 @@ static void enter_state(pennyworth_state_t state) {
 
 void pennyworth_state_init(lv_obj_t *sprite_img) {
   s_sprite = sprite_img;
+
+  pennyworth_settings_t settings;
+  pennyworth_storage_load(&settings);
+  s_awake_timeout_ms = (uint32_t)settings.sleep_timeout_s * 1000;
+
   enter_state(PENNYWORTH_ASLEEP);
 }
 
@@ -71,7 +80,7 @@ void pennyworth_state_tick(void) {
       break;
 
     case PENNYWORTH_AWAKE:
-      if (elapsed >= AWAKE_TIMEOUT_MS) {
+      if (elapsed >= s_awake_timeout_ms) {
         enter_state(PENNYWORTH_SLEEPING);
         break;
       }

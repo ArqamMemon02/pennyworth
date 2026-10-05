@@ -4,6 +4,7 @@
 #include <time.h>
 #include <stdio.h>
 
+#include "pennyworth_input.h"
 #include "pennyworth_state.h"
 #include "pennyworth_world.h"
 
@@ -33,8 +34,9 @@ static void state_tick_timer_cb(lv_timer_t *timer) {
 
 static void wake_on_tap_cb(lv_event_t *e) {
   (void)e;
-  /* Touchscreen tap as the fallback wake trigger CLAUDE.md calls for;
-   * double-tap-via-IMU is Milestone 4. */
+  /* Touchscreen single-tap fallback (CLAUDE.md §5) — separate from the
+   * double-tap path below, which goes through pennyworth_input so a single
+   * accidental bump on the pendant doesn't wake it. */
   pennyworth_state_wake_event();
 }
 
@@ -64,6 +66,7 @@ void pennyworth_ui_init(void) {
   lv_image_set_scale(pennyworth, 110); /* ~43% of the source's 200x200 */
   lv_obj_align(pennyworth, LV_ALIGN_CENTER, 0, 38);
   pennyworth_state_init(pennyworth);
+  pennyworth_input_init();
 
   s_clock_label = lv_label_create(round_mask);
   lv_obj_set_style_text_color(s_clock_label, lv_color_white(), 0);

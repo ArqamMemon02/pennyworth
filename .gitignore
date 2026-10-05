@@ -5,6 +5,9 @@
 .clang_complete
 .gcc-flags.json
 
+# Simulator's stand-in for flash/NVS (see pennyworth_storage.cpp)
+pennyworth_state.dat
+
 # OS
 .DS_Store
 Thumbs.db

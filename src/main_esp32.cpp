@@ -39,4 +39,9 @@ void setup() {
 void loop() {
   lv_timer_handler();
   delay(5);
+  /* TODO(Milestone 6): call pennyworth_input_raw_tap() from the real IMU
+   * accel-spike detection here (QMI8658-class, interrupt or polled) once
+   * include/board_pins.h has a verified pin for it. The double-tap logic
+   * and everything downstream already works — see pennyworth_input and the
+   * simulator's space-bar path in main_native.cpp. */
 }
