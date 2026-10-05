@@ -4,6 +4,8 @@
 #include <time.h>
 #include <stdio.h>
 
+#include "pennyworth_world.h"
+
 #define PENNYWORTH_SCREEN_DIAMETER 240
 
 static lv_obj_t *s_clock_label;
@@ -18,6 +20,8 @@ static void clock_timer_cb(lv_timer_t *timer) {
   snprintf(buf, sizeof(buf), "%02d:%02d:%02d", local_tm.tm_hour,
            local_tm.tm_min, local_tm.tm_sec);
   lv_label_set_text(s_clock_label, buf);
+
+  pennyworth_world_update(&local_tm);
 }
 
 void pennyworth_ui_init(void) {
@@ -32,9 +36,10 @@ void pennyworth_ui_init(void) {
                    PENNYWORTH_SCREEN_DIAMETER);
   lv_obj_center(round_mask);
   lv_obj_set_style_radius(round_mask, LV_RADIUS_CIRCLE, 0);
-  lv_obj_set_style_bg_color(round_mask, lv_color_hex(0x10131a), 0);
   lv_obj_set_style_bg_opa(round_mask, LV_OPA_COVER, 0);
   lv_obj_set_scrollable(round_mask, false);
+
+  pennyworth_world_init(round_mask);
 
   s_clock_label = lv_label_create(round_mask);
   lv_obj_set_style_text_color(s_clock_label, lv_color_white(), 0);
