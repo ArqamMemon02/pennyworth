@@ -11,6 +11,8 @@
 #define STAR_COUNT 14
 #define SUN_DIAMETER 28
 #define MOON_DIAMETER 46
+#define CLOUD_COUNT 2
+#define CLOUD_PUFFS 3
 
 /* Background tone keyframes across a 24h day. Colors stay mid-saturation
  * (never near-white or near-black) so the white clock text stays legible
@@ -36,12 +38,30 @@ static const tone_keyframe TONE_KEYFRAMES[] = {
 
 #define DAY_START_HOUR 6.5f
 #define DAY_END_HOUR 18.0f
+#define CLOUD_END_HOUR 10.0f /* clouds linger through dawn into mid-morning, then clear */
+
+/* Each cloud is 3 overlapping puffs (left, center-top, right) — the classic
+ * flat cloud-icon cluster. Positions/radii keep every puff's edge inside
+ * the 120px round boundary, same containment approach as the rest of this
+ * file (see DEVLOG re: clip_corner). */
+struct cloud_puff {
+  int16_t dx, dy, r;
+};
+struct cloud_def {
+  int16_t cx, cy;
+  cloud_puff puffs[CLOUD_PUFFS];
+};
+static const cloud_def CLOUD_DEFS[CLOUD_COUNT] = {
+    {78, 92, {{-14, 2, 9}, {0, -4, 13}, {14, 3, 10}}},
+    {168, 98, {{-13, 3, 9}, {1, -3, 12}, {14, 2, 9}}},
+};
 
 static lv_obj_t *s_bg;
 static lv_obj_t *s_sun;
 static lv_obj_t *s_moon_lit;
 static lv_obj_t *s_moon_shadow;
 static lv_obj_t *s_stars[STAR_COUNT];
+static lv_obj_t *s_clouds[CLOUD_COUNT][CLOUD_PUFFS];
 static bool s_is_day;
 static bool s_visibility_applied = false; /* forces the first update to set visibility, regardless of what s_is_day happens to default to */
 static bool s_initialized = false;
@@ -129,8 +149,25 @@ void pennyworth_world_init(lv_obj_t *parent) {
   s_moon_lit = make_dot(parent, MOON_DIAMETER, lv_color_make(0xe8, 0xe8, 0xec));
   lv_obj_set_pos(s_moon_lit, 147, 48);
 
-  s_moon_shadow =
-      make_dot(parent, MOON_DIAMETER, lv_color_make(0x20, 0x10, 0x0b));
+  /* Shadow's color is set every update() call to match the live sky tone
+   * (see below) so the dark side reads as "unlit," not as a black patch
+   * painted over the sky — lv_color_white() here is just a placeholder
+   * until the first update() call overwrites it. */
+  s_moon_shadow = make_dot(parent, MOON_DIAMETER, lv_color_white());
+
+  /* Clouds: dawn/morning only (see CLOUD_END_HOUR). Soft warm-white, not
+   * fully opaque, so the amber dawn tone shows through. */
+  for (int c = 0; c < CLOUD_COUNT; c++) {
+    const cloud_def &def = CLOUD_DEFS[c];
+    for (int p = 0; p < CLOUD_PUFFS; p++) {
+      const cloud_puff &puff = def.puffs[p];
+      lv_obj_t *dot =
+          make_dot(parent, puff.r * 2, lv_color_make(0xff, 0xf6, 0xe6));
+      lv_obj_set_style_bg_opa(dot, 210, 0);
+      lv_obj_set_pos(dot, def.cx + puff.dx - puff.r, def.cy + puff.dy - puff.r);
+      s_clouds[c][p] = dot;
+    }
+  }
 
   s_initialized = true;
 }
@@ -139,7 +176,13 @@ void pennyworth_world_update(const struct tm *now) {
   if (!s_initialized) return;
 
   float hour = now->tm_hour + now->tm_min / 60.0f;
-  lv_obj_set_style_bg_color(s_bg, tone_for_hour(hour), 0);
+  lv_color_t tone = tone_for_hour(hour);
+  lv_obj_set_style_bg_color(s_bg, tone, 0);
+
+  /* The moon's dark side is "unlit," not painted black — matching the live
+   * sky tone makes it blend away instead of looking like a hole cut in the
+   * background. */
+  lv_obj_set_style_bg_color(s_moon_shadow, tone, 0);
 
   bool is_day = hour >= DAY_START_HOUR && hour < DAY_END_HOUR;
   if (!s_visibility_applied || is_day != s_is_day) {
@@ -150,6 +193,11 @@ void pennyworth_world_update(const struct tm *now) {
     lv_obj_set_hidden(s_moon_shadow, is_day);
     for (int i = 0; i < STAR_COUNT; i++) lv_obj_set_hidden(s_stars[i], is_day);
   }
+
+  bool is_cloudy = is_day && hour < CLOUD_END_HOUR;
+  for (int c = 0; c < CLOUD_COUNT; c++)
+    for (int p = 0; p < CLOUD_PUFFS; p++)
+      lv_obj_set_hidden(s_clouds[c][p], !is_cloudy);
 
   double phase = moon_phase_fraction(now->tm_year + 1900, now->tm_mon + 1,
                                       now->tm_mday);
